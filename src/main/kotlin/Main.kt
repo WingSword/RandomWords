@@ -1,4 +1,5 @@
 package org.walks
+
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -8,7 +9,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlin.random.Random
 
-val dataMap = mutableMapOf<String, String>()
+val roomDataMap = mutableMapOf<String, String>()
+val roomWordMap = mutableMapOf<String, String>()
+
+
 
 //TIP 要<b>运行</b>代码，请按 <shortcut actionId="Run"/> 或
 // 点击装订区域中的 <icon src="AllIcons.Actions.Execute"/> 图标。
@@ -26,14 +30,14 @@ fun main() {
                 val key = parameters["key"]
                 val password = parameters["password"]
 
-                if (key!= null && password!= null) {
+                if (key != null && password != null) {
                     // 获取到了key和password参数将它们组合成唯一标识
                     val uniqueIdentifier = "$key:$password"
-                    if (dataMap.containsKey(uniqueIdentifier)) {
-                        handleExistingIdentifier(call,uniqueIdentifier)
+                    if (roomDataMap.containsKey(uniqueIdentifier)) {
+                        handleExistingIdentifier(call, uniqueIdentifier)
                     } else {
                         // 如果不存在，生成随机码，这里简单生成一个四位数字的随机码示例
-                        handleNewIdentifier(call = call,uniqueIdentifier)
+                        handleNewIdentifier(call = call, uniqueIdentifier)
                     }
                 } else {
                     if (key == null) {
@@ -51,7 +55,7 @@ fun main() {
 }
 
 private suspend fun handleExistingIdentifier(call: ApplicationCall, uniqueIdentifier: String) {
-    val randomCode = dataMap[uniqueIdentifier] !!
+    val randomCode = roomDataMap[uniqueIdentifier]!!
     call.respondText(randomCode)
 }
 
@@ -59,36 +63,24 @@ private suspend fun handleNewIdentifier(call: ApplicationCall, uniqueIdentifier:
     try {
         // 如果不存在，生成随机码，这里生成一个四位纯数字随机码
         val randomCode = (1000..9999).random(Random.Default).toString()
-        dataMap[uniqueIdentifier] = randomCode
+        roomDataMap[uniqueIdentifier] = randomCode
         call.respondText(randomCode)
     } catch (e: Exception) {
         call.respondText("随机码生成失败", status = HttpStatusCode.InternalServerError)
     }
 }
 
-fun addWordsToMap(map: MutableMap<String, String>) {
-    // 食物类
-    map["草莓"] = "樱桃"
-    map["芒果"] = "木瓜"
-    map["榴莲"] = "菠萝蜜"
-    map["柿子"] = "西红柿"
-    map["黄瓜"] = "青瓜"
-    map["茄子"] = "土豆"
-    map["冬瓜"] = "南瓜"
-    map["白菜"] = "青菜"
-    map["洋葱"] = "大蒜"
-    map["生姜"] = "辣椒"
-    map["油条"] = "麻花"
-    map["包子"] = "馒头"
-    map["汤圆"] = "元宵"
-    map["粽子"] = "月饼"
-    map["巧克力"] = "糖果"
-    map["饼干"] = "薯片"
-    map["酸奶"] = "牛奶布丁"
-    map["果汁"] = "汽水"
-    map["白酒"] = "啤酒"
-    map["红酒"] = "葡萄酒"
-    // 动物类
+fun newWordsMap(): Map<String, String> {
+    val map: MutableMap<String, String> = mutableMapOf()
+    map.addNatureWordsToMap().addAnimalWordsToMap().addNatureWordsToMap().addDailyWordsToMap().addJobWordsToMap()
+        .addOtherWordsToMap().addRecreationWordsToMap().addUnitWordsToMap().addDisciplineWordsToMap()
+        .addVehicleWordsToMap()
+    return map
+}
+
+// 1动物类
+fun MutableMap<String, String>.addAnimalWordsToMap(): MutableMap<String, String> {
+    val map = this
     map["大象"] = "犀牛"
     map["袋鼠"] = "树袋熊"
     map["骆驼"] = "羊驼"
@@ -109,7 +101,39 @@ fun addWordsToMap(map: MutableMap<String, String>) {
     map["兔子"] = "龙猫"
     map["松鼠"] = "花栗鼠"
     map["鸭子"] = "鹅"
-    // 生活用品类
+    return this
+}
+
+// 2食物类
+fun MutableMap<String, String>.addFoodWordsToMap(): MutableMap<String, String> {
+    val map = this
+    map["草莓"] = "樱桃"
+    map["芒果"] = "木瓜"
+    map["榴莲"] = "菠萝蜜"
+    map["柿子"] = "西红柿"
+    map["黄瓜"] = "青瓜"
+    map["茄子"] = "土豆"
+    map["冬瓜"] = "南瓜"
+    map["白菜"] = "青菜"
+    map["洋葱"] = "大蒜"
+    map["生姜"] = "辣椒"
+    map["油条"] = "麻花"
+    map["包子"] = "馒头"
+    map["汤圆"] = "元宵"
+    map["粽子"] = "月饼"
+    map["巧克力"] = "糖果"
+    map["饼干"] = "薯片"
+    map["酸奶"] = "牛奶布丁"
+    map["果汁"] = "汽水"
+    map["白酒"] = "啤酒"
+    map["红酒"] = "葡萄酒"
+
+    return this
+}
+
+fun MutableMap<String, String>.addDailyWordsToMap(): MutableMap<String, String> {
+    val map = this
+    // 3生活用品类
     map["牙刷"] = "梳子"
     map["毛巾"] = "手帕"
     map["杯子"] = "碗"
@@ -130,7 +154,13 @@ fun addWordsToMap(map: MutableMap<String, String>) {
     map["洗衣机"] = "烘干机"
     map["冰箱"] = "冰柜"
     map["微波炉"] = "烤箱"
-    // 自然类
+    return this
+}
+
+
+fun MutableMap<String, String>.addNatureWordsToMap(): MutableMap<String, String> {
+    val map = this
+    // 4自然类
     map["山峰"] = "山丘"
     map["瀑布"] = "溪流"
     map["沙漠"] = "戈壁"
@@ -151,7 +181,12 @@ fun addWordsToMap(map: MutableMap<String, String>) {
     map["星星"] = "星座"
     map["太阳"] = "夕阳"
     map["白云"] = "彩云"
-    // 娱乐类
+    return this
+}
+
+fun MutableMap<String, String>.addRecreationWordsToMap(): MutableMap<String, String> {
+    val map = this
+    // 5娱乐类
     map["唱歌"] = "唱戏"
     map["跳舞"] = "体操"
     map["篮球"] = "排球"
@@ -172,7 +207,12 @@ fun addWordsToMap(map: MutableMap<String, String>) {
     map["唱歌比赛"] = "舞蹈比赛"
     map["游乐园"] = "动物园"
     map["博物馆"] = "科技馆"
-    // 学科类
+    return this
+}
+
+fun MutableMap<String, String>.addDisciplineWordsToMap(): MutableMap<String, String> {
+    val map = this
+    // 6学科类
     map["语文"] = "数学"
     map["英语"] = "语文"
     map["物理"] = "化学"
@@ -193,7 +233,12 @@ fun addWordsToMap(map: MutableMap<String, String>) {
     map["体育项目"] = "运动赛事"
     map["科学实验"] = "技术发明"
     map["计算机软件"] = "信息技术设备"
-    // 职业类
+    return this
+}
+
+fun MutableMap<String, String>.addJobWordsToMap(): MutableMap<String, String> {
+    val map = this
+    // 7职业类
     map["医生"] = "护士"
     map["教师"] = "教授"
     map["警察"] = "消防员"
@@ -214,7 +259,38 @@ fun addWordsToMap(map: MutableMap<String, String>) {
     map["摄影师"] = "摄像师"
     map["美容师"] = "美发师"
     map["健身教练"] = "瑜伽教练"
-    // 交通工具类
+    return this
+}
+
+fun MutableMap<String, String>.addUnitWordsToMap(): MutableMap<String, String> {
+    val map = this
+    // 8建筑类
+    map["高楼"] = "大厦"
+    map["别墅"] = "洋房"
+    map["公寓"] = "宿舍"
+    map["商场"] = "超市"
+    map["学校"] = "幼儿园"
+    map["医院"] = "诊所"
+    map["图书馆"] = "书店"
+    map["电影院"] = "剧院"
+    map["博物馆"] = "展览馆"
+    map["体育馆"] = "体育场"
+    map["公园"] = "花园"
+    map["广场"] = "街道"
+    map["桥梁"] = "隧道"
+    map["火车站"] = "汽车站"
+    map["机场"] = "航站楼"
+    map["酒店"] = "宾馆"
+    map["餐厅"] = "饭店"
+    map["咖啡店"] = "茶馆"
+    map["工厂"] = "车间"
+    map["仓库"] = "货栈"
+    return this
+}
+
+fun MutableMap<String, String>.addVehicleWordsToMap(): MutableMap<String, String> {
+    val map = this
+    // 9交通工具类
     map["汽车"] = "火车"
     map["公交车"] = "地铁"
     map["自行车"] = "电动车"
@@ -237,28 +313,13 @@ fun addWordsToMap(map: MutableMap<String, String>) {
     map["咖啡店"] = "茶馆"
     map["工厂"] = "车间"
     map["仓库"] = "货栈"
-    // 建筑类
-    map["高楼"] = "大厦"
-    map["别墅"] = "洋房"
-    map["公寓"] = "宿舍"
-    map["商场"] = "超市"
-    map["学校"] = "幼儿园"
-    map["医院"] = "诊所"
-    map["图书馆"] = "书店"
-    map["电影院"] = "剧院"
-    map["博物馆"] = "展览馆"
-    map["体育馆"] = "体育场"
-    map["公园"] = "花园"
-    map["广场"] = "街道"
-    map["桥梁"] = "隧道"
-    map["火车站"] = "汽车站"
-    map["机场"] = "航站楼"
-    map["酒店"] = "宾馆"
-    map["餐厅"] = "饭店"
-    map["咖啡店"] = "茶馆"
-    map["工厂"] = "车间"
-    map["仓库"] = "货栈"
-    // 其他类
+    return this
+}
+
+
+fun MutableMap<String, String>.addOtherWordsToMap(): MutableMap<String, String> {
+    val map = this
+    // 10其他类
     map["红色"] = "粉色"
     map["蓝色"] = "紫色"
     map["圆形"] = "方形"
@@ -279,5 +340,5 @@ fun addWordsToMap(map: MutableMap<String, String>) {
     map["热闹"] = "喧闹"
     map["美丽"] = "漂亮"
     map["帅气"] = "英俊"
+    return this
 }
-

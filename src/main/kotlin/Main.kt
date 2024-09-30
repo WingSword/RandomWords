@@ -7,11 +7,18 @@ import io.ktor.server.netty.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlin.collections.set
 import kotlin.random.Random
 
-val roomDataMap = mutableMapOf<String, String>()
-val roomWordMap = mutableMapOf<String, String>()
-
+val roomDataMap = mutableMapOf<String, Int>()
+val roomWordMap = mutableMapOf<String, SpyWordsData>()
+val words by lazy {
+    newWordsMap()
+}
+val wordsList by lazy {
+    words.values
+    words.keys
+}
 
 
 //TIP 要<b>运行</b>代码，请按 <shortcut actionId="Run"/> 或
@@ -21,11 +28,44 @@ fun main() {
     //TIP 当文本光标位于高亮显示的文本处时按 <shortcut actionId="ShowIntentionActions"/>
     // 查看 IntelliJ IDEA 建议如何修正。
     println("Hello, " + name + "!")
-
     embeddedServer(Netty, port = 8080) {
         routing {
-            // 这里将是处理特定路由的逻辑
             post("/getRandomWord") {
+                val parameters = call.receiveParameters()
+                val key = parameters["key"]
+                val password = parameters["password"]
+                val playerNumber = parameters["playerNumber"]?.toInt()
+                if (key != null && password != null && playerNumber != null) {
+                    // 获取到了key和password参数将它们组合成唯一标识
+                    val uniqueIdentifier = "$key:$password"
+                    if (roomDataMap.containsKey(uniqueIdentifier)) {
+                        if (playerNumber == 1) {
+                            handleNewIdentifier(call, uniqueIdentifier)
+                        } else {
+                            handleExistingIdentifier(call, uniqueIdentifier, playerNumber)
+                        }
+
+                    } else {
+                        // 如果不存在，生成随机码，这里简单生成一个四位数字的随机码示例
+                        call.respondText("房间不存在", status = HttpStatusCode.BadRequest)
+                    }
+                } else {
+                    if (key == null) {
+                        call.respondText("缺少key参数", status = HttpStatusCode.BadRequest)
+                        return@post
+                    }
+                    if (password == null) {
+                        call.respondText("缺少password参数", status = HttpStatusCode.BadRequest)
+                        return@post
+                    }
+                    if (playerNumber == null) {
+                        call.respondText("缺少playerNumber参数", status = HttpStatusCode.BadRequest)
+                        return@post
+                    }
+                }
+            }
+            // 这里将是处理特定路由的逻辑
+            post("/createRoom") {
                 val parameters = call.receiveParameters()
                 val key = parameters["key"]
                 val password = parameters["password"]
@@ -34,10 +74,40 @@ fun main() {
                     // 获取到了key和password参数将它们组合成唯一标识
                     val uniqueIdentifier = "$key:$password"
                     if (roomDataMap.containsKey(uniqueIdentifier)) {
-                        handleExistingIdentifier(call, uniqueIdentifier)
+                        //已存在
+                        call.respondText("房间已存在", status = HttpStatusCode.BadRequest)
                     } else {
                         // 如果不存在，生成随机码，这里简单生成一个四位数字的随机码示例
-                        handleNewIdentifier(call = call, uniqueIdentifier)
+                        roomDataMap.put(uniqueIdentifier, 1)
+                        roomWordMap[uniqueIdentifier] = SpyWordsData("", 0, 0)
+                        call.respondText("1")
+                    }
+                } else {
+                    if (key == null) {
+                        call.respondText("缺少key参数", status = HttpStatusCode.BadRequest)
+                        return@post
+                    }
+                    if (password == null) {
+                        call.respondText("缺少password参数", status = HttpStatusCode.BadRequest)
+                        return@post
+                    }
+                }
+            }
+            post("/joinToGame") {
+                val parameters = call.receiveParameters()
+                val key = parameters["key"]
+                val password = parameters["password"]
+
+                if (key != null && password != null) {
+                    // 获取到了key和password参数将它们组合成唯一标识
+                    val uniqueIdentifier = "$key:$password"
+                    if (roomDataMap.containsKey(uniqueIdentifier)) {
+                        //已存在
+                        roomDataMap.put(uniqueIdentifier, roomDataMap[uniqueIdentifier]!! + 1)
+                        call.respondText(roomDataMap[uniqueIdentifier].toString())
+                    } else {
+                        // 如果不存在，生成随机码，这里简单生成一个四位数字的随机码示例
+                        call.respondText("房间不存在", status = HttpStatusCode.BadRequest)
                     }
                 } else {
                     if (key == null) {
@@ -54,19 +124,20 @@ fun main() {
     }.start(wait = true)
 }
 
-private suspend fun handleExistingIdentifier(call: ApplicationCall, uniqueIdentifier: String) {
-    val randomCode = roomDataMap[uniqueIdentifier]!!
-    call.respondText(randomCode)
+private suspend fun handleExistingIdentifier(call: ApplicationCall, uniqueIdentifier: String, player: Int) {
+    val randomCode = roomWordMap[uniqueIdentifier]!!
+    call.respondText(if (player == randomCode.spyNum) "卧底" else randomCode.word)
 }
 
 private suspend fun handleNewIdentifier(call: ApplicationCall, uniqueIdentifier: String) {
     try {
-        // 如果不存在，生成随机码，这里生成一个四位纯数字随机码
-        val randomCode = (1000..9999).random(Random.Default).toString()
-        roomDataMap[uniqueIdentifier] = randomCode
-        call.respondText(randomCode)
+        val roomSpyInfo = roomWordMap[uniqueIdentifier]?.copy() ?: throw Exception("房间数据未找到")
+        val randomWords = wordsList.toList().random()
+        val randomNumber = (1..roomDataMap[uniqueIdentifier]!!).random()
+        roomWordMap[uniqueIdentifier] = SpyWordsData(randomWords, randomNumber, roomSpyInfo.time++)
+        call.respondText(if (1 == randomNumber) "卧底" else randomWords)
     } catch (e: Exception) {
-        call.respondText("随机码生成失败", status = HttpStatusCode.InternalServerError)
+        call.respondText("随机码生成失败：${e.message}", status = HttpStatusCode.InternalServerError)
     }
 }
 
